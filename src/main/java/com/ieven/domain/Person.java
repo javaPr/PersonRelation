@@ -26,9 +26,10 @@ public class Person {
 	private String nodeType = "Person";
 	private String keyNumber;
 	private String personType;
+	private String[] labels;
 
-	@Relationship(type = "Relation",direction = Relationship.UNDIRECTED)
-	private List<Relation> relations = new ArrayList<>();
+//	@Relationship(type = "Relation",direction = Relationship.UNDIRECTED)
+//	private List<Relation> relations = new ArrayList<>();
 
 	public Person(){
 
@@ -103,11 +104,19 @@ public class Person {
 	}
 
 
-	public List<Relation> getRelations() {
+	/*public List<Relation> getRelations() {
 		return relations;
 	}
 
 	public void setRelations(List<Relation> relations) {
 		this.relations = relations;
+	}*/
+
+	public String[] getLabels() {
+		return labels;
+	}
+
+	public void setLabels(String[] labels) {
+		this.labels = labels;
 	}
 }

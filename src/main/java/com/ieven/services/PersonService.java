@@ -1,9 +1,6 @@
 package com.ieven.services;
 
-import com.ieven.domain.OneLayerRelationResult;
-import com.ieven.domain.Person;
-import com.ieven.domain.Relation;
-import com.ieven.domain.OnelayerResult;
+import com.ieven.domain.*;
 import com.ieven.repository.PersonRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +23,11 @@ public class PersonService {
     public Person getPersonByIdnumber(String idnumber) {
         return personRepository.findByIdnumber(idnumber);
     }
+
+
+//    public Collection<Result> gerGraph(String idnumber){
+//        return personRepository.getGraph(idnumber);
+//    }
 
     public Collection<Person> getPersonRelation(String idnumber) {
         Collection<Person> people = personRepository.getPerson(idnumber);
@@ -51,8 +53,29 @@ public class PersonService {
         personRepository.save(person);
     }
 
-//    public void updatePerson(Person person){
-//        personRepository.
-//    }
+
+    public Collection<OnelayerResult> getPersonRelation(String idnumber,float min,float max){
+        return personRepository.getPersonRelation(idnumber,min,max);
+    }
+
+    public Collection<NodeEdge> getPersonRelationNet(String idnumber,float min,float max){
+        return personRepository.getPersonRelationNet(idnumber,min,max);
+    }
+
+    public Collection<NodeEdge> getGroupRelationNet(String idnumber,float min,float max){
+        return personRepository.getGroupRelationNet(idnumber,min,max);
+    }
+
+    public Collection<NodeEdge> getClassRelationNet(String idnumber,float min,float max){
+        return personRepository.getClassRelationNet(idnumber,min,max);
+    }
+
+    public Collection<NodeEdge> getBasicRelationNet(String idnumber,float min,float max){
+        return personRepository.getBasicRelationNet(idnumber,min,max);
+    }
+
+    public Node getNodeById(String idnumber){
+        return personRepository.getNodeById(idnumber);
+    }
 }
 

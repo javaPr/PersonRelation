@@ -1,16 +1,12 @@
 package com.ieven.controller;
 
-import com.ieven.domain.OneLayerRelationResult;
-import com.ieven.domain.Person;
-import com.ieven.domain.OnelayerResult;
-import com.ieven.domain.Relation;
+import com.google.gson.Gson;
+import com.ieven.domain.*;
 import com.ieven.services.PersonService;
+import com.sun.org.apache.regexp.internal.RE;
 import jdk.nashorn.internal.runtime.arrays.IteratorAction;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
@@ -48,6 +44,22 @@ public class PersonController {
         return map;
     }
 
+
+    /*@RequestMapping(value = "/getGraph")
+    public Map<String, List<Result>> getGraph(@RequestParam(value = "idnumber") String idnumber) {
+        //Person person = personService.getPersonByIdnumber(idnumber);
+        Collection<Result> results = personService.gerGraph(idnumber);
+        Iterator<Result> iterator = results.iterator();
+        List<Result> resultList = new ArrayList<>();
+        while (iterator.hasNext()){
+            resultList.add(iterator.next());
+        }
+        Gson gson = new Gson();
+
+        Map<String, List<Result>> map = new HashMap<>();
+        map.put("person", resultList);
+        return map;
+    }*/
 
     /**
      * 判断身份证号对应的人是否存在
@@ -91,11 +103,12 @@ public class PersonController {
      * @param idnumber
      * @return
      */
-    @RequestMapping(value = "/getOneLayer")
+    @RequestMapping(value = "/getOneLayer",method = RequestMethod.POST)
     public Map<String, List<OnelayerResult>> getOneLayer(
-            @RequestParam(value = "idnumber") String idnumber,
+            @RequestParam(value = "idnumber") String[] idnumber,
             @RequestParam(value = "limit", required = false) Integer limit) {
-        Collection<OnelayerResult> relations = personService.getOneLayer(idnumber);
+        System.out.println("idnumber = "+idnumber+" limit = "+ limit);
+        Collection<OnelayerResult> relations = personService.getOneLayer(idnumber[0]);
         Map<String, List<OnelayerResult>> map = new HashMap<>();
         List<OnelayerResult> relationList = new ArrayList<>();
         Iterator<OnelayerResult> iterator = relations.iterator();
@@ -131,6 +144,19 @@ public class PersonController {
     }
 
 
+    @RequestMapping("/getPersonRelationList")
+    public Map<String,List<OnelayerResult>> getPersonRelation(){
+        Map<String,List<OnelayerResult>> map = new HashMap<>();
+        Collection<OnelayerResult> results = personService.getPersonRelation("123",8.0f,8.1f);
+        List<OnelayerResult> relationList = new ArrayList<>();
+        Iterator<OnelayerResult> iterator = results.iterator();
+        while (iterator.hasNext()) {
+            relationList.add(iterator.next());
+        }
+        map.put("ss",relationList);
+        return map;
+    }
+
     @RequestMapping("/savePerson")
     public Map<String,String> savePerson(){
         Map<String,String> map = new HashMap<>();
@@ -140,9 +166,9 @@ public class PersonController {
         relation.setName("测试");
         relation.setStartPerson(person);
         relation.setPerson(endPerson);
-        List<Relation> relationList = new ArrayList<>();
-        relationList.add(relation);
-        person.setRelations(relationList);
+//        List<Relation> relationList = new ArrayList<>();
+//        relationList.add(relation);
+//        person.setRelations(relationList);
         personService.savePerson(person);
         return map;
     }
@@ -152,11 +178,63 @@ public class PersonController {
     public Map<String,String> updatePerson(){
         Map<String,String> map = new HashMap<>();
         Person person = personService.getPersonByIdnumber("11111");
-        Relation relation = person.getRelations().get(0);
-        relation.setCode("G2323");
+//        Relation relation = person.getRelations().get(0);
+//        relation.setCode("G2323");
         person.setName(person.getName()+" !");
         personService.savePerson(person);
         return map;
+    }
+
+
+    @RequestMapping("/getPersonRelationGraph")
+    public Map<String,Set<Graph>> getRelationGraph(
+            @RequestBody RequestPara requestPara
+//            @RequestParam(value = "idnumber") String[] idnumber,
+//            @RequestParam(value = "personStrength") Float[] personStrength,
+//            @RequestParam(value = "groupStrength") Float[] groupStrength,
+//            @RequestParam(value = "classStrength") Float[] classStrenth,
+//            @RequestParam(value = "basicStrength") Float[] basicStrenth,
+//            @RequestParam(value = "limit", required = false) Integer limit
+    ){
+
+        Set<Graph> nodeList = new HashSet<>();
+        Set<Graph> edgeList = new HashSet<>();
+        Float[] personStrength = requestPara.getPersonStrength();
+        Float[] groupStrength = requestPara.getGroupStrength();
+        Float[] classStrenth = requestPara.getClassStrength();
+        Float[] basicStrenth = requestPara.getBasicStrength();
+        for (String id:requestPara.getIdnumber()){
+            Collection<NodeEdge> personCollection = personService.getPersonRelationNet(id,personStrength[0],personStrength[1]);
+            Collection<NodeEdge> groupCollecion = personService.getGroupRelationNet(id,groupStrength[0],groupStrength[1]);
+            Collection<NodeEdge> classCollection = personService.getClassRelationNet(id,classStrenth[0],classStrenth[1]);
+            Collection<NodeEdge> basicCollection = personService.getBasicRelationNet(id,basicStrenth[0],basicStrenth[1]);
+            assembleData(nodeList,edgeList,personCollection.iterator());
+            assembleData(nodeList,edgeList,groupCollecion.iterator());
+            assembleData(nodeList,edgeList,classCollection.iterator());
+            assembleData(nodeList,edgeList,basicCollection.iterator());
+            Node node = personService.getNodeById(id);
+            nodeList.add(node);
+        }
+
+
+
+        Map<String,Set<Graph>> map = new HashMap<>();
+        map.put("nodes",nodeList);
+        map.put("edges",edgeList);
+
+        return map;
+    }
+
+    private void assembleData(Set<Graph> nodeList,Set<Graph> edgeList,Iterator<NodeEdge> iterator){
+        while (iterator.hasNext()){
+            NodeEdge nodeEdge = iterator.next();
+            nodeList.add (new Node(nodeEdge.getIdnumber(),nodeEdge.getAlias(),nodeEdge.getName(),
+                    nodeEdge.getKeynumber(), nodeEdge.getLabels()));
+            edgeList.add(new Edge(nodeEdge.getFrom(),nodeEdge.getTo(),nodeEdge.getStrength(),
+                    nodeEdge.getCode(),nodeEdge.getDetail(),nodeEdge.getId(),
+                    nodeEdge.getRname(),nodeEdge.getRtype()));
+
+        }
     }
 
 }
